@@ -258,9 +258,11 @@ void File::parseOptionLine(const std::string& line, const std::string& section)
         if (!value.empty())
         {
             Option& option = getArrayOption(section, arrayOptionName);
-            if (value == "{")
-                startArray(option);
-            else if (value == "}")
+	        if ((value == "{") || (value[0] == '{'))
+	        {
+		        startArray(option);
+	        }
+            else if ((value == "}") || (value[0] == '}'))
                 currentArrayStack.pop_back();
             else
                 setOption(option.push(), value);
@@ -281,10 +283,32 @@ void File::parseOptionLine(const std::string& line, const std::string& section)
             strlib::trimWhitespace(value);
             // Check if this is the start of an array
             Option& option = options[section][name];
-            if (value == "{")
+            if ((value == "{") || (value[0] == '{'))
             {
-                arrayOptionName = name;
+	            bool bline = false;
+	            arrayOptionName = name;
                 currentArrayStack.assign(1, 0);
+	            if (value.find(',') > 0)
+	            {
+		            Option& option = getArrayOption(section, arrayOptionName);
+		            startArray(option);
+		            bline = true;
+		            int n = value.find('}');
+		            if (n != -1)
+		                value.erase(n);		         
+	            }
+	            while (value.find(',') != -1)
+	            {   
+		            int n = value.find(',');
+		            std::string s = value.substr(1, n);
+		            setOption(option.push(), s);
+		            value.erase(1, n);
+	            }
+	            if (bline)
+	            {
+		            currentArrayStack.clear();
+		            arrayOptionName.clear();
+	            }
             }
             else
             {
